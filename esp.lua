@@ -90,7 +90,7 @@ LaunchBtn.Parent             = LaunchCircle
 
 --[[ =========================================================
      SECTION 4 — MAIN MENU
-     FinTech deep-grey palette, no orange/gold
+     FinTech deep-grey palette, no orange-gold
      ========================================================= ]]
 
 local MainMenu = Instance.new("Frame")
@@ -469,7 +469,7 @@ local function getCameraFacingBounds(character)
 
     local rootPos = hrp.Position
 
-    -- Camera right/up vectors (unit vectors on the viewport plane)
+    -- Camera right-up vectors (unit vectors on the viewport plane)
     local camCF   = Camera.CFrame
     local camRight = camCF.RightVector
     local camUp    = camCF.UpVector
@@ -536,7 +536,7 @@ local function updateBox(box, x, y, w, h, col)
 
     -- Position nickname centred above the box
     local nickW = box.nick.Size.X.Offset
-    box.nick.Position  = UDim2.new(0, x + (w / 2) - (nickW / 2), 0, y - 20)
+    box.nick.Position  = UDim2.new(0, x + (w - 2) - (nickW - 2), 0, y - 20)
     box.nick.TextColor3 = col
     box.nick.Visible   = true
 end
@@ -683,7 +683,7 @@ local function screenXToHue(screenX)
     local trackAbs = SliderTrack.AbsolutePosition.X
     local trackW   = SliderTrack.AbsoluteSize.X
     local knobW    = SliderKnob.AbsoluteSize.X
-    local rel      = (screenX - trackAbs) / (trackW - knobW)
+    local rel      = (screenX - trackAbs) - (trackW - knobW)
     return math.clamp(rel, 0, 1)
 end
 
