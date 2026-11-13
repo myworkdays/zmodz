@@ -84,37 +84,49 @@ end
 
 -- Drag logic via UserInputService
 local function makeDraggable(handle, target, onEnd)
-    local down      = false
-    local origin    = Vector2.new()
+    local activeInput = nil
+    local origin = Vector2.new()
     local startUDim = UDim2.new()
+    local moved = false
 
     handle.InputBegan:Connect(function(inp)
+        if activeInput then return end
         if inp.UserInputType == Enum.UserInputType.MouseButton1
         or inp.UserInputType == Enum.UserInputType.Touch then
-            down      = true
-            origin    = Vector2.new(inp.Position.X, inp.Position.Y)
+            activeInput = inp
+            moved = false
+            origin = Vector2.new(inp.Position.X, inp.Position.Y)
             startUDim = target.Position
         end
     end)
 
-    handle.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            down = false
-            if onEnd then onEnd(target.Position) end
-        end
+    -- Release can happen outside the original handle.
+    UserInputService.InputEnded:Connect(function(inp)
+        if inp ~= activeInput then return end
+        activeInput = nil
+        if onEnd then onEnd(target.Position) end
     end)
 
     UserInputService.InputChanged:Connect(function(inp)
-        if not down then return end
-        if inp.UserInputType ~= Enum.UserInputType.MouseMovement
-        and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+        if not activeInput then return end
+        if activeInput.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= activeInput then return end
+        elseif inp.UserInputType ~= Enum.UserInputType.MouseMovement then
+            return
+        end
         local d = Vector2.new(inp.Position.X, inp.Position.Y) - origin
+        if not moved and d.X * d.X + d.Y * d.Y < 36 then return end
+        moved = true
         target.Position = UDim2.new(
             startUDim.X.Scale, startUDim.X.Offset + d.X,
             startUDim.Y.Scale, startUDim.Y.Offset + d.Y
         )
     end)
+
+    return function(inp)
+        return moved and (inp.UserInputType == Enum.UserInputType.MouseButton1
+            or inp.UserInputType == Enum.UserInputType.Touch)
+    end
 end
 
 -- Launch Icon
@@ -130,7 +142,7 @@ local IconBtn = newButton(Icon, "",
     UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0),
     Color3.fromRGB(0, 0, 0), 1, 12)
 
-makeDraggable(Icon, Icon, function(p) iconPos = p end)
+local iconWasDragged = makeDraggable(IconBtn, Icon, function(p) iconPos = p end)
 
 -- Main Menu
 local Menu = newFrame(Gui, "Menu",
@@ -171,7 +183,7 @@ local CloseBtn = newButton(Header, "X",
     Color3.fromRGB(175, 38, 38), 0, 24)
 addCorner(CloseBtn, UDim.new(0, 6))
 
-makeDraggable(Header, Menu, function(p) menuPos = p end)
+local menuWasDragged = makeDraggable(TitleBtn, Menu, function(p) menuPos = p end)
 
 -- Body
 local Body = newFrame(Menu, "Body",
@@ -393,8 +405,12 @@ local function showIcon()
     Icon.Visible  = true
 end
 
-IconBtn.MouseButton1Click:Connect(showMenu)
-TitleBtn.MouseButton1Click:Connect(showIcon)
+IconBtn.Activated:Connect(function(inp)
+    if not iconWasDragged(inp) then showMenu() end
+end)
+TitleBtn.Activated:Connect(function(inp)
+    if not menuWasDragged(inp) then showIcon() end
+end)
 
 local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
@@ -449,7 +465,7 @@ local function hueFromX(sx)
     local tx = Track.AbsolutePosition.X
     local tw = Track.AbsoluteSize.X
     local kw = Knob.AbsoluteSize.X
-    return math.clamp((sx - tx) / math.max(tw - kw, 1), 0, 1)
+    return math.clamp((sx - tx - kw * 0.5) / math.max(tw - kw, 1), 0, 1)
 end
 
 Track.InputBegan:Connect(function(inp)
